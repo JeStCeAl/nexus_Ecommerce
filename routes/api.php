@@ -1,61 +1,52 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UsuariosController;
 use App\Http\Controllers\ProductosController;
 use App\Http\Controllers\PedidosController;
-use App\Http\Controllers\DetallesController;
 use App\Http\Controllers\ComentariosController;
 
-// Route::get('/user', function (Request $request) {
-//     return $request->user();
-// })->middleware('auth:sanctum');
+Route::post('login', [UsuariosController::class, 'login']);
+Route::post('register', [UsuariosController::class, 'registrar']);
 
-Route::get('/test', function () {
-    return response()->json(['message' => 'API funcionando']);
-});
+Route::middleware(['jwt.auth'])->group(function () {
+    Route::get('user', [UsuariosController::class, 'getUserRole']);
+    Route::post('logout', [UsuariosController::class, 'logout']);
 
-// Rutas públicas (registro y login)
-Route::post('/register', [UsuariosController::class, 'registrar']);
-Route::post('/login', [UsuariosController::class, 'login']);
-
-// Rutas protegidas con JWT
-Route::middleware(['auth:api'])->group(function () {
-
-    Route::post('/logout', [UsuariosController::class, 'logout']);
-    Route::get('/user/role', [UsuariosController::class, 'getUserRole']);
-
-    // Rutas accesibles para usuarios comunes (user o admin)
+    // Rutas para user y admin
     Route::middleware(['role:user,admin'])->group(function () {
 
-        // Productos (ver productos disponibles)
-        Route::get('/productos', [ProductosController::class, 'index']);
-        Route::get('/productos/{id}', [ProductosController::class, 'show']);
+        Route::controller(ProductosController::class)->group(function () {
+            Route::get('productos', 'index');
+            Route::get('producto/{id}', 'show');
+        });
 
-        // Pedidos
-        Route::get('/pedidos', [PedidosController::class, 'index']);
-        Route::post('/pedidos', [PedidosController::class, 'store']);
-        Route::get('/pedidos/{id}', [PedidosController::class, 'show']);
+        Route::controller(PedidosController::class)->group(function () {
+            Route::get('pedidos', 'index');
+            Route::post('pedido', 'store');
+            Route::get('pedido/{id}', 'show');
+        });
 
-        // Comentarios
-        Route::post('/comentarios', [ComentariosController::class, 'store']);
-        Route::get('/comentarios/{producto_id}', [ComentariosController::class, 'getByProducto']);
+        Route::controller(ComentariosController::class)->group(function () {
+            Route::post('comentario', 'store');
+            Route::get('comentarios/{producto_id}', 'getByProducto');
+        });
     });
 
-    // Rutas exclusivas para admin
+    // Rutas solo para admin
     Route::middleware(['role:admin'])->group(function () {
 
-        // Gestión de productos
-        Route::post('/productos', [ProductosController::class, 'store']);
-        Route::put('/productos/{id}', [ProductosController::class, 'update']);
-        Route::delete('/productos/{id}', [ProductosController::class, 'destroy']);
+        Route::controller(ProductosController::class)->group(function () {
+            Route::post('crearProducto', 'store');
+            Route::put('editarProducto/{id}', 'update');
+            Route::delete('eliminarProducto/{id}', 'destroy');
+        });
 
-        // Gestión de usuarios (opcional)
-        Route::get('/usuarios', [UsuariosController::class, 'index']);
-        Route::get('/usuarios/{id}', [UsuariosController::class, 'show']);
-        Route::put('/usuarios/{id}', [UsuariosController::class, 'update']);
-        Route::delete('/usuarios/{id}', [UsuariosController::class, 'destroy']);
+        Route::controller(UsuariosController::class)->group(function () {
+            Route::get('usuarios', 'index');
+            Route::get('usuario/{id}', 'show');
+            Route::put('editarUsuario/{id}', 'update');
+            Route::delete('eliminarUsuario/{id}', 'destroy');
+        });
     });
-
 });
