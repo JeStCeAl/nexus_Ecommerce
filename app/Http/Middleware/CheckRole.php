@@ -13,7 +13,7 @@ class CheckRole
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, ...$roles): Response
+    public function handle(Request $request, Closure $next, ...$tipos): Response
     {
 
         // verificacion de usuario
@@ -23,7 +23,7 @@ class CheckRole
 
         $userRole = $request->user()->role;
 
-        if (!in_array($userRole, $roles)) {
+        if (!in_array($userRole, $tipos)) {
             return response()->json(['error' => 'No tienes el permiso para acceder a este recurso'], 403);
         }
 

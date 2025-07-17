@@ -17,7 +17,7 @@ class Usuario extends Authenticatable implements JWTSubject
         'telefono',
         'email',
         'password',
-        'role',
+        'tipo', // Cambiado de 'role' a 'tipo'
         'username',
         'imagenUrl'
     ];
@@ -44,17 +44,16 @@ class Usuario extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims(): array
     {
         return [
-            'role' => $this->role,
+            'tipo' => $this->tipo, // Cambiado de 'role' a 'tipo'
         ];
     }
 
-    public function hasRole($role)
+    public function hasRole($tipo) // Cambiado el nombre del parámetro
     {
-        return $this->role === $role;
+        return $this->tipo === $tipo; // Cambiado de 'role' a 'tipo'
     }
 
     public $timestamps = false;
-
 
     // Relaciones
     public function productos()

@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Facades\Password;
+use App\Notifications\ResetPasswordNotification;
 
 class UsuariosController extends Controller
 {
@@ -18,7 +20,7 @@ class UsuariosController extends Controller
             'telefono' => 'required|string|max:255',
             'email' => 'required|string|email|max:255',
             'password' => 'required|string|min:6',
-            'role' => 'required|string|max:255',
+            'tipo' => 'required|string|max:255', // Cambiado de role a tipo
             'username' => 'required|string|max:255',
             'imagenUrl' => 'nullable|string|max:255',
         ]);
@@ -36,7 +38,7 @@ class UsuariosController extends Controller
             'telefono' => $request->telefono,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'tipo' => $request->tipo, // Cambiado de role a tipo
             'username' => $request->username,
             'imagenUrl' => $request->imagenUrl,
         ]);
@@ -96,15 +98,15 @@ class UsuariosController extends Controller
         ]);
     }
 
-    public function role(Request $request)
+    public function tipo(Request $request) // Cambiado de role() a tipo()
     {
         return response()->json([
             'success' => true,
-            'role' => $request->user()->role,
+            'tipo' => $request->user()->tipo, // Cambiado de role a tipo
         ]);
     }
 
-    public function getUserRole(Request $request)
+    public function getUserTipo(Request $request) // Cambiado de getUserRole a getUserTipo
     {
         try {
             $usuario = JWTAuth::parseToken()->authenticate();
@@ -119,7 +121,7 @@ class UsuariosController extends Controller
             return response()->json([
                 'success' => true,
                 'usuario_id' => $usuario->id,
-                'role' => $usuario->role,
+                'tipo' => $usuario->tipo, // Cambiado de role a tipo
             ]);
         } catch (\Tymon\JWTAuth\Exceptions\JWTException $e) {
             return response()->json([
@@ -127,5 +129,75 @@ class UsuariosController extends Controller
                 'message' => 'Token inválido o expirado',
             ], 401);
         }
+    }
+
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $status = Password::sendResetLink(
+            $request->only('email'),
+            function ($user, $token) {
+                // Envía la notificación con tu implementación personalizada
+                $user->notify(new ResetPasswordNotification($token));
+            }
+        );
+
+        return $status === Password::RESET_LINK_SENT
+            ? response()->json(['success' => true, 'message' => __($status)])
+            : response()->json(['success' => false, 'message' => __($status)], 400);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password)
+                ])->save();
+            }
+        );
+
+        return $status == Password::PASSWORD_RESET
+            ? response()->json(['success' => true, 'message' => __($status)])
+            : response()->json(['success' => false, 'message' => __($status)], 400);
+    }
+
+    public function showResetForm($token, $email)
+    {
+        // Validar el email primero
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'error' => 'Email inválido'
+            ], 400);
+        }
+
+        // Construir URL correctamente
+        $resetUrl = rtrim(config('app.frontend_url'), '/') . '/reset-password?'
+            . http_build_query([
+                'token' => $token,
+                'email' => $email
+            ]);
+
+        return response()->json([
+            'token' => $token,
+            'email' => $email,
+            'reset_url' => $resetUrl
+        ]);
     }
 }

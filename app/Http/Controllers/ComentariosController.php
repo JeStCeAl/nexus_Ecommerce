@@ -59,7 +59,7 @@ class ComentariosController extends Controller
         }
         $validator = Validator::make($request->all(),[
             'fecha' => 'date',
-            'texto' => 'string|max:1000',
+            'texto' => 'string|max:1000|    ',
             'usuario' => 'string|max:255',
             'producto_id' => 'exists:productos,id'
         ]);
