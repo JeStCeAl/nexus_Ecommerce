@@ -200,4 +200,35 @@ class UsuariosController extends Controller
             'reset_url' => $resetUrl
         ]);
     }
+
+
+    /**
+     * Editar el perfil del usuario autenticado.
+     */
+    public function editarPerfil(Request $request)
+    {
+        $user = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
+            'password' => 'sometimes|string|min:8',
+            'role' => 'sometimes|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+
+        $validatedData = $validator->validated();
+
+        // Hashear la contraseña si está presente
+        if (isset($validatedData['password'])) {
+            $validatedData['password'] = Hash::make($validatedData['password']);
+        }
+
+        $user->update($validatedData);
+
+        return response()->json($user);
+    }
 }
