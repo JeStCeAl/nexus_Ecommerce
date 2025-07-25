@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use App\Http\Controllers\UsuariosController;
 use App\Http\Controllers\ProductosController;
 use App\Http\Controllers\PedidosController;
@@ -8,22 +9,28 @@ use App\Http\Controllers\ComentariosController;
 
 Route::post('login', [UsuariosController::class, 'login']);
 Route::post('register', [UsuariosController::class, 'registrar']);
+
 // Ruta para solicitar el restablecimiento (POST)
 Route::post('forgot-password', [UsuariosController::class, 'forgotPassword']);
 
 // Ruta para mostrar formulario (GET)
-Route::get('reset-password/{token}/{email}', [UsuariosController::class, 'showResetForm'])
-     ->name('password.reset');
+Route::get('reset-password/{token}/{email}', [UsuariosController::class, 'showResetForm'])->name('password.reset');
 
 // Ruta para procesar el restablecimiento (POST)
 Route::post('reset-password', [UsuariosController::class, 'resetPassword']);
 
 Route::middleware(['jwt.auth'])->group(function () {
+
+    // ✅ Esta es la nueva ruta para el perfil del usuario autenticado
+    Route::get('me', function (Request $request) {
+        return response()->json($request->user());
+    });
+
     Route::get('user', [UsuariosController::class, 'getUserTipo']); // Cambiado de getUserRole a getUserTipo
     Route::post('logout', [UsuariosController::class, 'logout']);
 
     // Rutas para user y admin
-    Route::middleware(['tipo:user,admin'])->group(function () { // Cambiado de role a tipo
+    Route::middleware(['tipo:user,admin'])->group(function () {
 
         Route::controller(ProductosController::class)->group(function () {
             Route::get('productos', 'index');
@@ -43,7 +50,7 @@ Route::middleware(['jwt.auth'])->group(function () {
     });
 
     // Rutas solo para admin
-    Route::middleware(['tipo:admin'])->group(function () { // Cambiado de role a tipo
+    Route::middleware(['tipo:admin'])->group(function () {
 
         Route::controller(ProductosController::class)->group(function () {
             Route::post('crearProducto', 'store');
