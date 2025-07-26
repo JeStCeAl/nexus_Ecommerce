@@ -205,30 +205,46 @@ class UsuariosController extends Controller
     /**
      * Editar el perfil del usuario autenticado.
      */
-    public function editarPerfil(Request $request)
-    {
-        $user = $request->user();
+public function editarPerfil(Request $request)
+{
+    $usuario = JWTAuth::parseToken()->authenticate();
 
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
-            'password' => 'sometimes|string|min:8',
-            'role' => 'sometimes|string|max:255',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
-        $validatedData = $validator->validated();
-
-        // Hashear la contraseña si está presente
-        if (isset($validatedData['password'])) {
-            $validatedData['password'] = Hash::make($validatedData['password']);
-        }
-
-        $user->update($validatedData);
-
-        return response()->json($user);
+    if (!$usuario) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Usuario no autenticado',
+        ], 401);
     }
+
+    $validator = Validator::make($request->all(), [
+        'nombre' => 'sometimes|string|max:255',
+        'direccion' => 'sometimes|string|max:255',
+        'telefono' => 'sometimes|string|max:255',
+        'email' => 'sometimes|string|email|max:255|unique:usuarios,email,' . $usuario->id,
+        'password' => 'sometimes|string|min:6',
+        'tipo' => 'sometimes|string|max:255',
+        'username' => 'sometimes|string|max:255|unique:usuarios,username,' . $usuario->id,
+        'imagenUrl' => 'nullable|string|max:255',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'errors' => $validator->errors(),
+        ], 422);
+    }
+
+    $data = $validator->validated();
+
+    if (isset($data['password'])) {
+        $data['password'] = Hash::make($data['password']);
+    }
+
+    $usuario->update($data);
+
+    return response()->json([
+        'success' => true,
+        'usuario' => $usuario,
+    ]);
+}
 }
